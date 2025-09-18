@@ -11,10 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('branches', function (Blueprint $table) {
+        Schema::create('molecule_lab_rules', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('slug')->unique();
+            $table->integer('molecule_id');
+            $table->integer('laboratory_parameter_id');
+            $table->enum('operator', ['>=', '<=', '=', '>', '<']);
+            $table->decimal('value', 8, 2);
+            $table->string('explanation')->nullable();
             $table->timestamps();
         });
     }
@@ -24,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('branches');
+        Schema::dropIfExists('molecule_lab_rules');
     }
 };
