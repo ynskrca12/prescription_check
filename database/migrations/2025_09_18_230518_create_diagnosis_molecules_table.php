@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('diagnosis_molecules', function (Blueprint $table) {
             $table->id();
-            $table->integer('diagnosis_id');
+            $table->integer('diagnosis_code_id');
             $table->integer('molecule_id');
             $table->timestamps();
         });

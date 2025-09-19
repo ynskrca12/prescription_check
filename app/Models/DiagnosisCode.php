@@ -20,7 +20,13 @@ class DiagnosisCode extends Model
 
     public function molecules()
     {
-        return $this->belongsToMany(Molecule::class, 'diagnosis_molecule');
+        return $this->belongsToMany(
+            Molecule::class,
+            'diagnosis_molecules', // tablo ismi migration ile aynı olmalı
+            'diagnosis_code_id',   // pivot tablodaki diagnosis_code_id
+            'molecule_id'          // pivot tablodaki molecule_id
+        );
     }
+
 
 }

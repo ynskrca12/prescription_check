@@ -14,7 +14,12 @@ class Molecule extends Model
     // Bir ilacın birden fazla tanısı olabilir (many-to-many)
     public function diagnoses()
     {
-        return $this->belongsToMany(DiagnosisCode::class, 'diagnosis_molecule');
+        return $this->belongsToMany(
+            DiagnosisCode::class,
+            'diagnosis_molecules',
+            'molecule_id',
+            'diagnosis_code_id'
+        );
     }
 
     // Bir ilacın birden fazla laboratuvar kuralı olabilir (one-to-many)

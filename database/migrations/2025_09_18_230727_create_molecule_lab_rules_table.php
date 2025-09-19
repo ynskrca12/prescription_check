@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->integer('molecule_id');
             $table->integer('laboratory_parameter_id');
-            $table->enum('operator', ['>=', '<=', '=', '>', '<']);
+            $table->enum('operator', ['>=', '<=', '=', '>', '<'])->nullable();
             $table->decimal('value', 8, 2);
             $table->string('explanation')->nullable();
             $table->timestamps();
