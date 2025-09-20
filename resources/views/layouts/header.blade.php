@@ -243,10 +243,10 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-bell fs-5"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                        {{-- <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
                             3
                             <span class="visually-hidden">okunmamış bildirim</span>
-                        </span>
+                        </span> --}}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow border-0" style="width: 300px;">
                         <li class="dropdown-header d-flex justify-content-between align-items-center">
@@ -304,7 +304,7 @@
                         </div>
                         <div class="d-flex flex-column align-items-start">
                             <small class="mb-0 fw-semibold">{{ Auth::user()->name ?? 'Kullanıcı' }}</small>
-                            <small class="text-muted" style="font-size: 0.7rem;">{{ Auth::user()->role ?? 'Admin' }}</small>
+                            <small class="text-white" style="font-size: 0.7rem;">{{ Auth::user()->role ?? 'Admin' }}</small>
                         </div>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow border-0">

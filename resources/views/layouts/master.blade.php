@@ -150,9 +150,9 @@
         <!-- Breadcrumb -->
         @if(!empty(trim($__env->yieldContent('breadcrumb'))))
             <nav aria-label="breadcrumb" class="mb-4 px-3">
-                <ol class="breadcrumb bg-white p-3 rounded-3 shadow-sm">
+                <ol class="breadcrumb bg-white p-3" style="border-radius: 12px;border: 1px solid #dcdcdc;">
                     <li class="breadcrumb-item">
-                        <a href="{{ url('/') }}" class="text-decoration-none">
+                        <a href="{{ url('/') }}" class="text-decoration-none text-dark">
                             <i class="fas fa-home me-1"></i>Ana Sayfa
                         </a>
                     </li>
@@ -167,7 +167,7 @@
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h1 class="h3 mb-0 text-dark fw-bold">@yield('page-title')</h1>
+                            <h1 class="h4 mb-0 text-dark fw-bold">@yield('page-title')</h1>
                             @if(!empty(trim($__env->yieldContent('page-description'))))
                                 <p class="text-muted mb-0">@yield('page-description')</p>
                             @endif
