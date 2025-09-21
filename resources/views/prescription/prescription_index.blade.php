@@ -51,12 +51,11 @@
 
         /* Glass Morphism Cards */
         .glass-card {
-            background: var(--glass-bg);
+            background: #fff;
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
             border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--shadow-lg);
+            border: 1px solid #dcdcdc;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
@@ -723,7 +722,7 @@
 
 <!-- Gelişmiş Yardım Modal -->
 <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="margin-top: 80px;">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold" id="helpModalLabel">
@@ -968,6 +967,7 @@
 @endsection
 
 @push('scripts')
+
 <!-- Modern Toast Notification System -->
 <script>
 class ModernToast {
@@ -1014,38 +1014,12 @@ window.showToast = ModernToast.show;
 <!-- Enhanced Modal and Interaction Scripts -->
 <script>
 $(document).ready(function() {
-    // Modal fixes and enhancements
-    function initializeModals() {
-        $('.modal-backdrop').remove();
-        $('body').removeClass('modal-open').css({
-            'padding-right': '',
-            'overflow': ''
-        });
-    }
-
-    initializeModals();
-
-    // Help Modal
-    const helpModal = document.getElementById('helpModal');
-    let modalInstance = null;
-
-    if (helpModal) {
-        modalInstance = new bootstrap.Modal(helpModal, {
-            backdrop: true,
-            keyboard: true,
-            focus: true
-        });
-
-        // Modal events
-        helpModal.addEventListener('show.bs.modal', function() {
-            $('.modal-backdrop').remove();
-            $('body').removeClass('modal-open');
-        });
-
-        helpModal.addEventListener('hidden.bs.modal', function() {
-            setTimeout(() => initializeModals(), 100);
-        });
-    }
+const helpModalEl = document.getElementById('helpModal');
+const helpModal = new bootstrap.Modal(helpModalEl, {
+    backdrop: false,  // gölgeliği kapatır
+    keyboard: true,
+    focus: true
+});
 
     // Keyboard shortcuts
     $(document).on('keydown', function(e) {
@@ -1147,7 +1121,6 @@ $(document).ready(function() {
 });
 </script>
 
-// Enhanced Prescription System Logic
 <script>
 // jQuery Easing fonksiyonlarını ekle
 $.extend($.easing, {
@@ -1557,28 +1530,33 @@ $(function() {
     });
 
     // Enhanced reset functionality
-    $('#resetForm').on('click', function() {
-        // Add loading animation
-        $(this).html('<i class="fas fa-spinner fa-spin me-2"></i>Sıfırlanıyor...');
+$(document).ready(function() {
+    $(document).on('click touchstart', '#resetForm', function(e) {
+    e.preventDefault();
+    console.log('RESET BASILDI 🚀');
+    const btn = $(this);
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Sıfırlanıyor...');
 
-        setTimeout(() => {
-            $('#branchSelect, #diagnosisSelect, #moleculeSelect').val('').trigger('change');
-            $('#diagnosisSelect').html('<option value="">🔬 Önce branş seçiniz</option>').prop('disabled', true);
-            $('#moleculeSelect').html('<option value="">💊 Önce tanı seçiniz</option>').prop('disabled', true);
-            $('#moleculeInfoCard, #labRulesCard, #resultCard').addClass('d-none');
-            $('#welcomeMessage').removeClass('d-none').addClass('fade-in');
-            $('#exportResults').prop('disabled', true);
-            updateStepProgress(1);
+    setTimeout(() => {
+        $('#branchSelect, #diagnosisSelect, #moleculeSelect').val('').trigger('change');
+        $('#diagnosisSelect').html('<option value="">🔬 Önce branş seçiniz</option>').prop('disabled', true);
+        $('#moleculeSelect').html('<option value="">💊 Önce tanı seçiniz</option>').prop('disabled', true);
+        $('#moleculeInfoCard, #labRulesCard, #resultCard').addClass('d-none');
+        $('#welcomeMessage').removeClass('d-none').addClass('fade-in');
+        $('#exportResults').prop('disabled', true);
+        updateStepProgress(1);
 
-            // Reset button text
-            $(this).html('<i class="fas fa-redo me-2"></i>Sıfırla');
+        // Reset button text
+        btn.prop('disabled', false).html('<i class="fas fa-redo me-2"></i>Sıfırla');
 
-            showToast('success', 'Sıfırlandı', 'Form başarıyla sıfırlandı');
+        showToast('success', 'Sıfırlandı', 'Form başarıyla sıfırlandı');
 
-            // Remove animation class
-            setTimeout(() => $('#welcomeMessage').removeClass('fade-in'), 600);
-        }, 1000);
-    });
+        // Remove animation class
+        setTimeout(() => $('#welcomeMessage').removeClass('fade-in'), 600);
+    }, 1000);
+});
+});
+
 
     // Enhanced form validation
     function validateCurrentStep() {
@@ -1950,27 +1928,8 @@ function exportToPDF() {
         </div>
     `;
 
-    // Open print dialog with formatted content
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Reçete Uygunluk Raporu</title>
-            <style>
-                body { margin: 0; padding: 20px; }
-                @media print {
-                    body { margin: 0; }
-                }
-            </style>
-        </head>
-        <body>
-            ${pdfContent}
-            <script>window.print(); window.close();</script>
-        </body>
-        </html>
-    `);
-}
 
+}
+</script>
 
 @endpush

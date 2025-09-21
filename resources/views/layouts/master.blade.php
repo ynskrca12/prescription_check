@@ -8,10 +8,10 @@
     <title>@yield('title', 'Reçete Uygunluk Sistemi')</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('assets/images/favicon.ico') }}">
+    {{-- <link rel="icon" type="image/x-icon" href="{{ asset('assets/images/favicon.ico') }}"> --}}
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
+    {{-- <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}"> --}}
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -75,7 +75,6 @@
 
         .btn * {
             position: relative;
-            z-index: 1;
         }
 
         .card {
@@ -162,21 +161,40 @@
         @endif
 
         <!-- Page Title -->
-        @if(!empty(trim($__env->yieldContent('page-title'))))
-            <div class="row mb-4 px-3">
-                <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h1 class="h4 mb-0 text-dark fw-bold">@yield('page-title')</h1>
-                            @if(!empty(trim($__env->yieldContent('page-description'))))
-                                <p class="text-muted mb-0">@yield('page-description')</p>
-                            @endif
-                        </div>
+@if(!empty(trim($__env->yieldContent('page-title'))))
+    <div class="row mb-4 px-3">
+        <div class="col-12">
+            <!-- Desktop Layout -->
+            <div class="d-none d-md-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h4 mb-0 text-dark fw-bold">@yield('page-title')</h1>
+                    @if(!empty(trim($__env->yieldContent('page-description'))))
+                        <p class="text-muted mb-0">@yield('page-description')</p>
+                    @endif
+                </div>
+                @yield('page-actions')
+            </div>
+
+            <!-- Mobile Layout -->
+            <div class="d-md-none">
+                <!-- Title Section -->
+                <div class="text-center mb-3">
+                    <h1 class="h5 mb-1 text-dark fw-bold">@yield('page-title')</h1>
+                    @if(!empty(trim($__env->yieldContent('page-description'))))
+                        <p class="text-muted small mb-0">@yield('page-description')</p>
+                    @endif
+                </div>
+
+                <!-- Actions Section -->
+                <div class="d-flex justify-content-center">
+                    <div class="btn-group-vertical btn-group-sm w-100" role="group" style="max-width: 300px;">
                         @yield('page-actions')
                     </div>
                 </div>
             </div>
-        @endif
+        </div>
+    </div>
+@endif
 
         <!-- Flash Messages -->
         @if(session('success'))
