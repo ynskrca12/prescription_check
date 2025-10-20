@@ -23,4 +23,13 @@ Route::prefix('ajax/prescription')->group(function() {
 
     Route::post('/check/{molecule}', [PrescriptionController::class, 'checkEligibility'])
         ->name('ajax.prescription.check');
+
+
+
+    Route::get('/diagnosis/{branchId}', [PrescriptionController::class, 'getDiagnosisCodes']);
+    Route::get('/molecules/{diagnosisId}', [PrescriptionController::class, 'getMolecules']);
+    Route::get('/workflow/{moleculeId}', [PrescriptionController::class, 'getMoleculeWorkflow']);
+    Route::get('/parameter-details', [PrescriptionController::class, 'getParameterDetails']);
+    Route::get('/labrules/{moleculeId}', [PrescriptionController::class, 'getLabRules']); // ✅ EKLE
+    Route::post('/process-step/{moleculeId}', [PrescriptionController::class, 'processStep']);
 });

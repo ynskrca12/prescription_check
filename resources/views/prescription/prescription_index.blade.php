@@ -599,7 +599,7 @@
         </div>
 
         <!-- Sağ Panel - Bilgi ve Sonuçlar -->
-        <div class="col-lg-8">
+        {{-- <div class="col-lg-8">
             <!-- Başlangıç Mesajı -->
             <div class="welcome-container fade-in" id="welcomeMessage">
                 <i class="fas fa-prescription-bottle-alt fa-5x pulse-icon mb-4" style="color: var(--primary-gradient);"></i>
@@ -709,6 +709,39 @@
                         </button>
                         <button class="btn btn-outline-success" id="shareResult">
                             <i class="fas fa-share me-2"></i>Paylaş
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div> --}}
+        <!-- Workflow Container - Dinamik olarak render edilecek -->
+        <div class="col-lg-8">
+            <!-- Welcome Message -->
+            <div class="welcome-container fade-in" id="welcomeMessage">
+                <!-- Mevcut welcome message içeriği -->
+            </div>
+
+            <!-- Workflow Steps Container -->
+            <div id="workflowContainer" class="d-none">
+                <!-- Buraya dinamik adımlar eklenecek -->
+            </div>
+
+            <!-- Final Result Card -->
+            <div class="result-card d-none slide-up" id="finalResultCard">
+                <div class="card-header card-header-gradient">
+                    <h5 class="mb-0 d-flex align-items-center">
+                        <i class="fas fa-clipboard-check me-3"></i>
+                        Uygunluk Sonucu
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div id="finalResult"></div>
+                    <div class="mt-4 d-flex gap-3">
+                        <button class="btn btn-primary" id="saveResult">
+                            <i class="fas fa-save me-2"></i>Sonucu Kaydet
+                        </button>
+                        <button class="btn btn-outline-primary" id="printResult">
+                            <i class="fas fa-print me-2"></i>Yazdır
                         </button>
                     </div>
                 </div>
@@ -967,6 +1000,1403 @@
 @endsection
 
 @push('scripts')
+<script>
+    // ========================================
+    // GLOBAL HELPER FUNCTIONS (EN BAŞTA OLMALI)
+    // ========================================
+
+    // CSRF Token
+    const csrfToken = '{{ csrf_token() }}';
+
+    // Loading functions
+    function showModernLoading(elementId) {
+        $(`#${elementId}`).removeClass('d-none');
+    }
+
+    function hideModernLoading(elementId) {
+        $(`#${elementId}`).addClass('d-none');
+    }
+
+    // Step progress update
+    function updateStepProgress(step) {
+        const totalSteps = 5;
+
+        // Update step indicators
+        for (let i = 1; i <= totalSteps; i++) {
+            const stepElement = $(`#stepIndicator${i}`);
+            stepElement.removeClass('active completed');
+
+            if (i < step) {
+                stepElement.addClass('completed');
+            } else if (i === step) {
+                stepElement.addClass('active');
+            }
+        }
+
+        // Update progress bar
+        const progress = (step / totalSteps) * 100;
+        $('#overallProgress').css('width', progress + '%').attr('aria-valuenow', progress);
+        $('#progressText').text(`${step}/${totalSteps} Adım Tamamlandı`);
+    }
+
+    // Toast notification
+    function showToast(type, title, message, duration = 3000) {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastId = 'toast-' + Date.now();
+
+        const icons = {
+            success: 'fa-check-circle text-success',
+            error: 'fa-times-circle text-danger',
+            warning: 'fa-exclamation-triangle text-warning',
+            info: 'fa-info-circle text-info'
+        };
+
+        const toastHtml = `
+            <div id="${toastId}" class="toast toast-modern show" role="alert">
+                <div class="toast-header">
+                    <i class="fas ${icons[type]} me-2"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+        setTimeout(() => {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                toast.classList.add('fade');
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    }
+
+    // Global workflow state
+    // let workflowState = {
+    //     molecule_id: null,
+    //     workflow: [],
+    //     current_step: null,
+    //     answers: {},
+    //     lab_values: {},
+    //     stored_variables: {},
+    //     step_history: []
+    // };
+
+    console.log('Global functions loaded');
+</script>
+
+<script>
+    // ... (önceki global fonksiyonlar)
+
+    // ========================================
+    // WORKFLOW MANAGEMENT FUNCTIONS
+    // ========================================
+
+    function loadMoleculeWorkflow(moleculeId) {
+        $('#moleculeLoading').removeClass('d-none');
+
+        $.ajax({
+            url: `/ajax/prescription/workflow/${moleculeId}`,
+            method: 'GET',
+            success: function(response) {
+                if (!response.has_rules) {
+                    showToast('warning', 'Uyarı', response.message);
+                    $('#welcomeMessage').removeClass('d-none');
+                    return;
+                }
+
+                // Workflow state'i başlat
+                workflowState = {
+                    molecule_id: moleculeId,
+                    workflow: response.workflow,
+                    current_step: 1,
+                    answers: {},
+                    lab_values: {},
+                    stored_variables: {},
+                    step_history: []
+                };
+
+                $('#welcomeMessage').addClass('d-none');
+                $('#workflowContainer').removeClass('d-none');
+
+                // İlk adımı render et
+                renderStep(getStepByNumber(1));
+
+                updateStepProgress(4);
+                showToast('info', 'Workflow Yüklendi', 'Soruları cevaplayarak ilerleyin');
+            },
+            error: function() {
+                showToast('error', 'Hata', 'Workflow yüklenemedi');
+            },
+            complete: function() {
+                $('#moleculeLoading').addClass('d-none');
+            }
+        });
+    }
+
+    // function getStepByNumber(stepNumber) {
+    //     return workflowState.workflow.find(s => s.step === stepNumber);
+    // }
+    function getStepByNumber(stepNumber) {
+    console.log('Looking for step:', stepNumber, 'in workflow:', workflowState.workflow); // ✅ LOG EKLE
+
+    const step = workflowState.workflow.find(s => s.step == stepNumber);
+
+    if (!step) {
+        console.error('Step not found! Available steps:', workflowState.workflow.map(s => s.step)); // ✅ LOG EKLE
+    }
+
+    return step;
+}
+
+    function getStepById(stepId) {
+        if (stepId === 'end') return null;
+        if (typeof stepId === 'number') return getStepByNumber(stepId);
+        return workflowState.workflow.find(s => s.id === stepId);
+    }
+
+    function renderStep(step) {
+    console.log('🎬 RENDER STEP CALLED:', step);
+
+    if (!step) {
+        console.error('❌ Step is null/undefined');
+        return;
+    }
+
+    console.log('📝 Step type:', step.type);
+
+    workflowState.current_step = step.step;
+    workflowState.step_history.push(step.step);
+
+    const container = $('#workflowContainer');
+    console.log('📦 Container found:', container.length > 0);
+
+    container.empty();
+
+    let stepHtml = '';
+
+    switch (step.type) {
+        case 'prerequisite_question':
+            console.log('Rendering prerequisite_question');
+            stepHtml = renderPrerequisiteQuestion(step);
+            break;
+        case 'info_message':
+            console.log('Rendering info_message');
+            stepHtml = renderInfoMessage(step);
+            break;
+        case 'lab_parameters_input':
+            console.log('Rendering lab_parameters_input');
+            stepHtml = renderLabParametersInput(step);
+            break;
+        case 'lab_parameters':
+            console.log('Rendering lab_parameters');
+            stepHtml = renderLabParameters(step);
+            break;
+        case 'adinamik_question':
+            console.log('Rendering adinamik_question');
+            stepHtml = renderPrerequisiteQuestion(step);
+            break;
+        case 'complex_criteria_check':
+            console.log('Rendering complex_criteria_check');
+            stepHtml = renderComplexCriteria(step);
+            break;
+        case 'termination_warning':
+            console.log('Rendering termination_warning');
+            stepHtml = renderTerminationWarning(step);
+            break;
+        case 'blocking_message':
+            console.log('Showing final result (blocking)');
+            showFinalResult(false, step.message);
+            return;
+        default:
+            console.error('❌ Unknown step type:', step.type);
+            showToast('error', 'Hata', 'Bilinmeyen adım tipi: ' + step.type);
+            return;
+    }
+
+    console.log('📄 HTML length:', stepHtml.length);
+    console.log('First 200 chars:', stepHtml.substring(0, 200));
+
+    container.html(stepHtml);
+    container.addClass('slide-up');
+
+    console.log('✅ HTML inserted into container');
+
+    // Progress güncellemesi
+    const progressPercent = ((step.step / workflowState.workflow.length) * 80) + 20;
+    $('#overallProgress').css('width', progressPercent + '%');
+    $('#progressText').text(`Adım ${step.step}/${workflowState.workflow.length}`);
+
+    console.log('✅ renderStep completed');
+}
+
+    function renderPrerequisiteQuestion(step) {
+        let html = `
+            <div class="result-card mb-4 slide-up">
+                <div class="card-header card-header-info">
+                    <h5 class="mb-0 text-white d-flex align-items-center">
+                        <i class="fas fa-question-circle me-3"></i>
+                        Ön Kontrol Sorusu ${step.step}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="question-container">
+                        <label class="form-label fw-bold fs-5 mb-4">
+                            <i class="fas fa-chevron-right text-primary me-2"></i>
+                            ${step.question}
+                        </label>
+        `;
+
+        if (step.answer_type === 'yes_no') {
+            html += `
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="${step.id}" id="${step.id}_yes" value="yes">
+                    <label class="btn btn-outline-success btn-lg" for="${step.id}_yes">
+                        <i class="fas fa-check-circle me-2"></i>Evet
+                    </label>
+
+                    <input type="radio" class="btn-check" name="${step.id}" id="${step.id}_no" value="no">
+                    <label class="btn btn-outline-danger btn-lg" for="${step.id}_no">
+                        <i class="fas fa-times-circle me-2"></i>Hayır
+                    </label>
+                </div>
+            `;
+        }
+
+        html += `
+                    </div>
+                    ${step.help_text ? `<small class="text-muted d-block mt-3"><i class="fas fa-info-circle me-1"></i>${step.help_text}</small>` : ''}
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        ${workflowState.step_history.length > 1 ? `
+                            <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                                <i class="fas fa-arrow-left me-2"></i>Geri
+                            </button>
+                        ` : '<div></div>'}
+
+                        <button type="button" class="btn btn-primary btn-lg" onclick="submitAnswer('${step.id}')">
+                            <i class="fas fa-arrow-right me-2"></i>Devam Et
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function renderInfoMessage(step) {
+        let html = `
+            <div class="result-card mb-4 slide-up">
+                <div class="card-header card-header-info">
+                    <h5 class="mb-0 text-white d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3"></i>
+                        ${step.title}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info alert-modern mb-4">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>${step.message}</strong>
+                    </div>
+        `;
+
+        if (step.criteria_list && step.criteria_list.length > 0) {
+            html += '<ul class="list-unstyled mt-3">';
+            step.criteria_list.forEach(criterion => {
+                html += `<li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>${criterion}</li>`;
+            });
+            html += '</ul>';
+        }
+
+        html += `
+                    <div class="mt-4 text-center">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="proceedToStep(${step.next_step})">
+                            <i class="fas fa-arrow-right me-2"></i>Devam Et
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function renderLabParametersInput(step) {
+        let html = `
+            <div class="result-card mb-4 slide-up">
+                <div class="card-header card-header-success">
+                    <h5 class="mb-0 text-white d-flex align-items-center">
+                        <i class="fas fa-vial me-3"></i>
+                        ${step.title}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    ${step.description ? `
+                        <div class="alert alert-info alert-modern mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            ${step.description}
+                        </div>
+                    ` : ''}
+                    <div class="row g-3">
+        `;
+
+        step.parameters.forEach(param => {
+            html += `
+                <div class="col-md-6">
+                    <div class="lab-input-modern">
+                        <label class="form-label fw-bold d-flex align-items-center">
+                            <i class="fas fa-flask text-primary me-2"></i>
+                            ${param.label}
+                            ${param.required ? '<span class="badge bg-primary ms-2">Gerekli</span>' : ''}
+                        </label>
+                        <div class="input-group">
+                            <input type="number"
+                                class="form-control lab-param-input"
+                                name="${param.name}"
+                                id="param_${param.name}"
+                                placeholder="Değer girin"
+                                step="0.01"
+                                ${param.validation ? `min="${param.validation.min}" max="${param.validation.max}"` : ''}
+                                ${param.required ? 'required' : ''}>
+                            <span class="input-group-text bg-light fw-bold">${param.unit}</span>
+                        </div>
+                        ${param.normal_range ? `<small class="text-muted mt-1 d-block">Normal aralık: ${param.normal_range}</small>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+                    <div class="mt-4 d-flex justify-content-end">
+                        <button type="button" class="btn btn-success btn-lg" onclick="submitLabParameters('${step.id}')">
+                            <i class="fas fa-check-circle me-2"></i>Devam Et
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function renderComplexCriteria(step) {
+        let html = `
+            <div class="result-card mb-4 slide-up">
+                <div class="card-header card-header-gradient">
+                    <h5 class="mb-0 text-white d-flex align-items-center">
+                        <i class="fas fa-clipboard-check me-3"></i>
+                        ${step.title}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info alert-modern mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>${step.description}</strong>
+                    </div>
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary btn-lg" onclick="evaluateCriteria('${step.id}')">
+                            <i class="fas fa-calculator me-2"></i>Kriterleri Değerlendir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        return html;
+    }
+
+    function renderTerminationWarning(step) {
+        let html = `
+            <div class="result-card mb-4 slide-up">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0 text-white d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-3"></i>
+                        ${step.title}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-warning alert-modern">
+                        ${step.message}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <button type="button" class="btn btn-success btn-lg" onclick="showFinalResult(true, 'Bilgilendirme tamamlandı')">
+                            <i class="fas fa-check-circle me-2"></i>Tamamla
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        return html;
+    }
+
+    function submitAnswer(stepId) {
+        const answer = $(`input[name="${stepId}"]:checked`).val();
+
+        if (!answer) {
+            showToast('warning', 'Uyarı', 'Lütfen bir seçenek seçin');
+            return;
+        }
+
+        workflowState.answers[stepId] = answer;
+        processStep(stepId);
+    }
+
+    function submitLabParameters(stepId) {
+        const labValues = {};
+        let allFilled = true;
+
+        $('.lab-param-input').each(function() {
+            const name = $(this).attr('name');
+            const value = $(this).val();
+            if (!value) {
+                allFilled = false;
+                return false;
+            }
+            labValues[name] = parseFloat(value);
+        });
+
+        if (!allFilled) {
+            showToast('warning', 'Uyarı', 'Lütfen tüm değerleri girin');
+            return;
+        }
+
+        workflowState.lab_values = { ...workflowState.lab_values, ...labValues };
+        processStep(stepId);
+    }
+
+function processStep(stepId) {
+    $.ajax({
+        url: `/ajax/prescription/process-step/${workflowState.molecule_id}`,
+        method: 'POST',
+        data: {
+            _token: csrfToken,
+            step_id: stepId,
+            answers: workflowState.answers,
+            lab_values: workflowState.lab_values,
+            stored_variables: workflowState.stored_variables
+        },
+        success: function(response) {
+            console.log('✅ Process step response:', response);
+
+            // ÖNCE blocked/final kontrolü
+            if (response.blocked || response.is_final) {
+                console.log('🛑 Final result - blocked:', response.blocked, 'is_final:', response.is_final);
+                showFinalResult(response.eligible, response.message);
+                return; // ✅ BURAYI KONTROL ET - return var mı?
+            }
+
+            // Sonra next_step kontrolü
+            if (response.next_step && response.next_step !== 'end') {
+                console.log('➡️ Proceeding to next step:', response.next_step);
+                proceedToStep(response.next_step);
+            } else {
+                console.log('✅ Workflow completed');
+                showFinalResult(true, 'İşlem tamamlandı');
+            }
+        },
+        error: function(xhr) {
+            console.error('❌ Process step error:', xhr);
+            showToast('error', 'Hata', 'İşlem başarısız');
+        }
+    });
+}
+
+    function proceedToStep(nextStepNumber) {
+        console.log('Proceeding to step:', nextStepNumber); // ✅ LOG EKLE
+
+        if (nextStepNumber === 'end' || !nextStepNumber) {
+            showFinalResult(true, 'İşlem tamamlandı');
+            return;
+        }
+
+        const nextStep = getStepByNumber(nextStepNumber);
+
+        console.log('Next step found:', nextStep); // ✅ LOG EKLE
+
+        if (nextStep) {
+            renderStep(nextStep);
+        } else {
+            console.error('Step not found:', nextStepNumber); // ✅ LOG EKLE
+            showToast('error', 'Hata', 'Sonraki adım bulunamadı');
+        }
+    }
+
+    function evaluateCriteria(stepId) {
+        processStep(stepId);
+    }
+
+    function showFinalResult(eligible, message) {
+        $('#workflowContainer').addClass('d-none');
+        $('#finalResultCard').removeClass('d-none');
+
+        const alertClass = eligible ? 'alert-success' : 'alert-danger';
+        const icon = eligible ? 'fa-check-circle' : 'fa-times-circle';
+
+        $('#finalResult').html(`
+            <div class="alert ${alertClass} alert-modern">
+                <i class="fas ${icon} fa-3x mb-3"></i>
+                <h4>${eligible ? 'UYGUN' : 'UYGUN DEĞİL'}</h4>
+                <p>${message}</p>
+            </div>
+        `);
+
+        updateStepProgress(5);
+    }
+
+    function goBackStep() {
+        // Geri gitme implementasyonu
+        showToast('info', 'Bilgi', 'Geri gitme özelliği yakında eklenecek');
+    }
+
+    function resetWorkflow() {
+        workflowState = {
+            molecule_id: null,
+            workflow: [],
+            current_step: null,
+            answers: {},
+            lab_values: {},
+            stored_variables: {},
+            step_history: []
+        };
+        $('#workflowContainer').addClass('d-none').empty();
+        $('#finalResultCard').addClass('d-none');
+        $('#welcomeMessage').removeClass('d-none');
+    }
+
+    console.log('Workflow functions loaded');
+</script>
+
+{{-- new rules --}}
+<script>
+// Global workflow state
+let workflowState = {
+    molecule_id: null,
+    workflow: [],
+    current_step: null,
+    answers: {},
+    lab_values: {},
+    stored_variables: {},
+    step_history: []
+};
+
+// Molekül seçildiğinde workflow yükle
+$('#moleculeSelect').on('change', function() {
+    const moleculeId = $(this).val();
+
+    if (!moleculeId) {
+        resetWorkflow();
+        return;
+    }
+
+    // Workflow'u yükle
+    loadMoleculeWorkflow(moleculeId);
+});
+
+function loadMoleculeWorkflow(moleculeId) {
+    // showModernLoading('moleculeLoading');
+    $('#moleculeLoading').removeClass('d-none');
+
+    $.ajax({
+        url: `/ajax/prescription/workflow/${moleculeId}`,
+        method: 'GET',
+        success: function(response) {
+            if (!response.has_rules) {
+                showToast('warning', 'Uyarı', response.message);
+                $('#welcomeMessage').removeClass('d-none');
+                return;
+            }
+
+            // Workflow state'i başlat
+            workflowState = {
+                molecule_id: moleculeId,
+                workflow: response.workflow,
+                current_step: 1,
+                answers: {},
+                lab_values: {},
+                stored_variables: {},
+                step_history: []
+            };
+
+            $('#welcomeMessage').addClass('d-none');
+            $('#workflowContainer').removeClass('d-none');
+
+            // İlk adımı render et
+            renderStep(getStepByNumber(1));
+
+            updateStepProgress(4);
+            showToast('info', 'Workflow Yüklendi', 'Soruları cevaplayarak ilerleyin');
+        },
+        error: function() {
+            showToast('error', 'Hata', 'Workflow yüklenemedi');
+        },
+        complete: function() {
+            // hideModernLoading('moleculeLoading');
+            $('#moleculeLoading').addClass('d-none');
+        }
+    });
+}
+
+// function getStepByNumber(stepNumber) {
+//     return workflowState.workflow.find(s => s.step === stepNumber);
+// }
+
+function getStepById(stepId) {
+    if (stepId === 'end') return null;
+    if (typeof stepId === 'number') return getStepByNumber(stepId);
+    return workflowState.workflow.find(s => s.id === stepId);
+}
+
+// function renderStep(step) {
+//     if (!step) {
+//         console.error('Step not found');
+//         return;
+//     }
+
+//     workflowState.current_step = step.step;
+//     workflowState.step_history.push(step.step);
+
+//     const container = $('#workflowContainer');
+//     container.empty();
+
+//     let stepHtml = '';
+
+//     switch (step.type) {
+//         case 'prerequisite_question':
+//             stepHtml = renderPrerequisiteQuestion(step);
+//             break;
+//         case 'lab_parameters':
+//             stepHtml = renderLabParameters(step);
+//             break;
+//         case 'conditional_lab_check':
+//             stepHtml = renderConditionalLabCheck(step);
+//             break;
+//         case 'blocking_message':
+//             showFinalResult(false, step.message);
+//             return;
+//     }
+
+//     container.html(stepHtml);
+//     container.addClass('slide-up');
+
+//     // Progress güncellemesi
+//     const progressPercent = ((step.step / workflowState.workflow.length) * 80) + 20;
+//     $('#overallProgress').css('width', progressPercent + '%');
+//     $('#progressText').text(`Adım ${step.step}/${workflowState.workflow.length}`);
+// }
+
+function renderPrerequisiteQuestion(step) {
+    let html = `
+        <div class="result-card mb-4 slide-up">
+            <div class="card-header card-header-info">
+                <h5 class="mb-0 text-white d-flex align-items-center">
+                    <i class="fas fa-question-circle me-3"></i>
+                    Ön Kontrol Sorusu ${step.step}
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="question-container">
+                    <label class="form-label fw-bold fs-5 mb-4">
+                        <i class="fas fa-chevron-right text-primary me-2"></i>
+                        ${step.question}
+                    </label>
+    `;
+
+    if (step.answer_type === 'yes_no') {
+        html += `
+            <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="${step.id}" id="${step.id}_yes" value="yes">
+                <label class="btn btn-outline-success btn-lg" for="${step.id}_yes">
+                    <i class="fas fa-check-circle me-2"></i>Evet
+                </label>
+
+                <input type="radio" class="btn-check" name="${step.id}" id="${step.id}_no" value="no">
+                <label class="btn btn-outline-danger btn-lg" for="${step.id}_no">
+                    <i class="fas fa-times-circle me-2"></i>Hayır
+                </label>
+            </div>
+        `;
+    } else if (step.answer_type === 'multiple_choice') {
+        html += `
+            <select class="form-select modern-select" name="${step.id}" id="${step.id}">
+                <option value="">Seçiniz...</option>
+        `;
+        step.options.forEach(opt => {
+            html += `<option value="${opt}">${opt}</option>`;
+        });
+        html += `</select>`;
+    } else if (step.answer_type === 'numeric_input') {
+        const min = step.validation?.min ?? 0;
+        const max = step.validation?.max ?? 999999;
+        html += `
+            <div class="input-group input-group-lg">
+                <input type="number"
+                       class="form-control modern-select"
+                       name="${step.id}"
+                       id="${step.id}"
+                       placeholder="Değer giriniz"
+                       min="${min}"
+                       max="${max}"
+                       step="0.01">
+                <span class="input-group-text bg-light fw-bold">${step.unit || ''}</span>
+            </div>
+            ${step.validation ? `
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Geçerli aralık: ${min} - ${max} ${step.unit || ''}
+                </small>
+            ` : ''}
+        `;
+    }
+
+    html += `
+                </div>
+                <div class="mt-4 d-flex justify-content-between align-items-center">
+                    ${workflowState.step_history.length > 1 ? `
+                        <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                            <i class="fas fa-arrow-left me-2"></i>Geri
+                        </button>
+                    ` : '<div></div>'}
+
+                    <button type="button" class="btn btn-primary btn-lg" onclick="submitAnswer('${step.id}')">
+                        <i class="fas fa-arrow-right me-2"></i>Devam Et
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+function renderLabParameters(step) {
+    let html = `
+        <div class="result-card mb-4 slide-up">
+            <div class="card-header card-header-success">
+                <h5 class="mb-0 text-white d-flex align-items-center">
+                    <i class="fas fa-vial me-3"></i>
+                    Laboratuvar Parametreleri
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                ${step.description ? `
+                    <div class="alert alert-info alert-modern mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>${step.description}</strong>
+                        ${step.logic === 'OR' ? ' (En az biri gerekli)' : ' (Tümü gerekli)'}
+                    </div>
+                ` : ''}
+
+                <div class="row g-3">
+    `;
+
+    step.parameters.forEach((param, index) => {
+        html += `
+            <div class="col-md-6">
+                <div class="lab-input-modern">
+                    <label class="form-label fw-bold d-flex align-items-center">
+                        <i class="fas fa-flask text-primary me-2"></i>
+                        ${param.label || param.name}
+                        <span class="badge bg-primary ms-2">Gerekli</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="number"
+                               class="form-control lab-param-input"
+                               name="${param.name}"
+                               id="param_${param.name}"
+                               placeholder="Değer girin"
+                               step="0.01"
+                               required>
+                        <span class="input-group-text bg-light fw-bold">${param.unit}</span>
+                    </div>
+                    <small class="text-muted mt-1 d-block">
+                        Beklenen: ${param.operator} ${param.value} ${param.unit}
+                        ${param.description ? `<br><em>${param.description}</em>` : ''}
+                    </small>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+                </div>
+                <div class="mt-4 d-flex justify-content-between">
+                    ${workflowState.step_history.length > 1 ? `
+                        <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                            <i class="fas fa-arrow-left me-2"></i>Geri
+                        </button>
+                    ` : '<div></div>'}
+
+                    <button type="button" class="btn btn-success btn-lg" onclick="submitLabParameters('${step.id}')">
+                        <i class="fas fa-check-circle me-2"></i>Kontrol Et
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+function renderConditionalLabCheck(step) {
+    // Conditional lab check'i normal lab check olarak render et
+    // Backend'de koşul kontrolü yapılacak
+
+    let html = `
+        <div class="result-card mb-4 slide-up">
+            <div class="card-header card-header-warning">
+                <h5 class="mb-0 text-white d-flex align-items-center">
+                    <i class="fas fa-vial me-3"></i>
+                    Koşullu Laboratuvar Kontrolü
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-warning alert-modern mb-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>${step.description || 'Önceki cevaplarınıza göre laboratuvar değerleri kontrol edilecek'}</strong>
+                </div>
+
+                <div id="conditionalLabInputs">
+                    <!-- Bu alan backend'den dönen koşula göre dinamik dolacak -->
+                </div>
+
+                <div class="mt-4 text-center">
+                    <button type="button" class="btn btn-primary btn-lg" onclick="processConditionalLab('${step.id}')">
+                        <i class="fas fa-sync-alt me-2"></i>Kontrolü Başlat
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+function submitAnswer(stepId) {
+    const inputElement = $(`[name="${stepId}"]`);
+    let answer = null;
+
+    if (inputElement.attr('type') === 'radio') {
+        answer = $(`input[name="${stepId}"]:checked`).val();
+    } else {
+        answer = inputElement.val();
+    }
+
+    if (!answer) {
+        showToast('warning', 'Uyarı', 'Lütfen soruyu cevaplayın');
+        return;
+    }
+
+    // Validasyon kontrolü (numeric input için)
+    const step = getStepById(stepId);
+    if (step.answer_type === 'numeric_input' && step.validation) {
+        const numValue = parseFloat(answer);
+        if (numValue < step.validation.min || numValue > step.validation.max) {
+            showToast('error', 'Hata', `Değer ${step.validation.min} - ${step.validation.max} aralığında olmalıdır`);
+            return;
+        }
+    }
+
+    // Cevabı kaydet
+    workflowState.answers[stepId] = answer;
+
+    // Store variable varsa kaydet
+    if (step.store_as) {
+        workflowState.stored_variables[step.store_as] = answer;
+    }
+
+    // Backend'e gönder
+    processStep(stepId);
+}
+
+function submitLabParameters(stepId) {
+    const step = getStepById(stepId);
+    const labValues = {};
+    let allFilled = true;
+
+    step.parameters.forEach(param => {
+        const value = $(`#param_${param.name}`).val();
+        if (!value) {
+            allFilled = false;
+            return;
+        }
+        labValues[param.name] = parseFloat(value);
+    });
+
+    if (!allFilled) {
+        showToast('warning', 'Uyarı', 'Lütfen tüm laboratuvar değerlerini girin');
+        return;
+    }
+
+    // Lab değerlerini kaydet
+    workflowState.lab_values = { ...workflowState.lab_values, ...labValues };
+
+    // Backend'e gönder
+    processStep(stepId);
+}
+
+function processConditionalLab(stepId) {
+    // Conditional lab için özel işlem
+    showToast('info', 'İşleniyor', 'Koşullar değerlendiriliyor...');
+
+    // Backend koşulları değerlendirecek ve dinamik parametreleri döndürecek
+    $.ajax({
+        url: `/ajax/prescription/process-step/${workflowState.molecule_id}`,
+        method: 'POST',
+        data: {
+            _token: csrfToken,
+            step_id: stepId,
+            answers: workflowState.answers,
+            lab_values: workflowState.lab_values,
+            stored_variables: workflowState.stored_variables
+        },
+        success: function(response) {
+            if (response.success) {
+                if (response.needs_lab_input) {
+                    // Dinamik lab inputlarını render et
+                    renderDynamicLabInputs(response.parameters, stepId);
+                } else {
+                    handleStepResponse(response);
+                }
+            } else {
+                showToast('error', 'Hata', response.message);
+            }
+        },
+        error: function() {
+            showToast('error', 'Hata', 'İşlem sırasında bir hata oluştu');
+        }
+    });
+}
+
+function renderDynamicLabInputs(parameters, stepId) {
+    let html = '<div class="row g-3">';
+
+    parameters.forEach(param => {
+        html += `
+            <div class="col-md-6">
+                <div class="lab-input-modern">
+                    <label class="form-label fw-bold d-flex align-items-center">
+                        <i class="fas fa-flask text-primary me-2"></i>
+                        ${param.label || param.name}
+                    </label>
+                    <div class="input-group">
+                        <input type="number"
+                               class="form-control conditional-lab-input"
+                               name="${param.name}"
+                               placeholder="Değer girin"
+                               step="0.01">
+                        <span class="input-group-text bg-light fw-bold">${param.unit}</span>
+                    </div>
+                    <small class="text-muted mt-1">
+                        ${param.description || `Beklenen: ${param.operator} ${param.value} ${param.unit}`}
+                    </small>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    html += `
+        <div class="mt-4 text-center">
+            <button type="button" class="btn btn-success btn-lg" onclick="submitConditionalLab('${stepId}')">
+                <i class="fas fa-check-circle me-2"></i>Değerleri Kontrol Et
+            </button>
+        </div>
+    `;
+
+    $('#conditionalLabInputs').html(html);
+}
+
+function submitConditionalLab(stepId) {
+    const labValues = {};
+    let allFilled = true;
+
+    $('.conditional-lab-input').each(function() {
+        const name = $(this).attr('name');
+        const value = $(this).val();
+        if (!value) {
+            allFilled = false;
+            return;
+        }
+        labValues[name] = parseFloat(value);
+    });
+
+    if (!allFilled) {
+        showToast('warning', 'Uyarı', 'Lütfen tüm değerleri girin');
+        return;
+    }
+
+    workflowState.lab_values = { ...workflowState.lab_values, ...labValues };
+    processStep(stepId);
+}
+
+// function processStep(stepId) {
+//     showModernLoading('workflowContainer');
+
+//     $.ajax({
+//         url: `/ajax/prescription/process-step/${workflowState.molecule_id}`,
+//         method: 'POST',
+//         data: {
+//             _token: csrfToken,
+//             step_id: stepId,
+//             answers: workflowState.answers,
+//             lab_values: workflowState.lab_values,
+//             stored_variables: workflowState.stored_variables
+//         },
+//         success: function(response) {
+//             hideModernLoading('workflowContainer');
+
+//             if (response.success) {
+//                 handleStepResponse(response);
+//             } else {
+//                 showToast('error', 'Hata', response.message);
+//             }
+//         },
+//         error: function(xhr) {
+//             hideModernLoading('workflowContainer');
+//             showToast('error', 'Hata', 'İşlem sırasında bir hata oluştu');
+//         }
+//     });
+// }
+
+function handleStepResponse(response) {
+    // Store variable varsa kaydet
+    if (response.store_variable) {
+        workflowState.stored_variables = {
+            ...workflowState.stored_variables,
+            ...response.store_variable
+        };
+    }
+
+    // Blocked mı kontrolü
+    if (response.blocked || response.is_final) {
+        showFinalResult(response.eligible, response.message, response.results);
+        return;
+    }
+
+    // Sonraki adıma geç
+    if (response.next_step && response.next_step !== 'end') {
+        const nextStep = getStepById(response.next_step);
+        if (nextStep) {
+            renderStep(nextStep);
+        } else {
+            showToast('error', 'Hata', 'Sonraki adım bulunamadı');
+        }
+    } else {
+        showFinalResult(true, 'İşlem tamamlandı');
+    }
+}
+
+function showFinalResult(eligible, message, labResults = null) {
+    $('#workflowContainer').addClass('d-none');
+    $('#finalResultCard').removeClass('d-none').addClass('slide-up');
+
+    const alertClass = eligible ? 'alert-success-modern' : 'alert-danger-modern';
+    const icon = eligible ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
+    const title = eligible ? '✅ Reçete Yazılabilir' : '❌ Reçete Yazılamaz';
+    const bgClass = eligible ? 'bg-success' : 'bg-danger';
+
+    let html = `
+        <div class="alert alert-modern ${alertClass} border-0 shadow-sm">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <div class="result-icon ${bgClass} text-white rounded-circle d-flex align-items-center justify-content-center"
+                         style="width: 60px; height: 60px;">
+                        <i class="fas ${icon.split(' ')[0]} fa-2x"></i>
+                    </div>
+                </div>
+                <div class="col">
+                    <h4 class="mb-1 fw-bold">${title}</h4>
+                    <p class="mb-0 text-muted">Reçete Uygunluk Durumu</p>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="result-message">
+                <p class="mb-0">${message}</p>
+            </div>
+    `;
+
+    // Lab sonuçlarını göster
+    if (labResults && labResults.length > 0) {
+        html += `
+            <hr class="my-3">
+            <h6 class="fw-bold mb-3">Laboratuvar Değerleri:</h6>
+            <div class="row g-2">
+        `;
+
+        labResults.forEach(result => {
+            const statusClass = result.passed ? 'success' : 'danger';
+            const statusIcon = result.passed ? 'check' : 'times';
+            html += `
+                <div class="col-md-6">
+                    <div class="alert alert-${statusClass} mb-0 py-2">
+                        <i class="fas fa-${statusIcon}-circle me-2"></i>
+                        <strong>${result.parameter}:</strong> ${result.user_value}
+                        <small class="d-block text-muted">Beklenen: ${result.expected}</small>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+    }
+
+    html += `
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Kontrol Tarihi: ${new Date().toLocaleString('tr-TR')}
+                </small>
+            </div>
+        </div>
+    `;
+
+    // Workflow bilgilerini göster
+    html += `
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Kontrol Detayları</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong>Branş:</strong> ${$('#branchSelect option:selected').text()}</p>
+                        <p class="mb-2"><strong>Tanı:</strong> ${$('#diagnosisSelect option:selected').text()}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong>Molekül:</strong> ${$('#moleculeSelect option:selected').text()}</p>
+                        <p class="mb-2"><strong>Toplam Adım:</strong> ${workflowState.step_history.length}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    $('#finalResult').html(html);
+    updateStepProgress(5);
+    $('#exportResults').prop('disabled', false);
+
+    // Scroll to result
+    $('html, body').animate({
+        scrollTop: $('#finalResultCard').offset().top - 100
+    }, 800);
+
+    const toastType = eligible ? 'success' : 'error';
+    showToast(toastType, title, 'Kontrol tamamlandı');
+}
+
+function goBackStep() {
+    if (workflowState.step_history.length <= 1) {
+        return;
+    }
+
+    // Son adımı çıkar
+    workflowState.step_history.pop();
+
+    // Bir önceki adıma dön
+    const previousStepNumber = workflowState.step_history[workflowState.step_history.length - 1];
+    const previousStep = getStepByNumber(previousStepNumber);
+
+    if (previousStep) {
+        // Son cevabı sil
+        delete workflowState.answers[previousStep.id];
+
+        // Adımı render et
+        renderStep(previousStep);
+    }
+}
+
+function resetWorkflow() {
+    workflowState = {
+        molecule_id: null,
+        workflow: [],
+        current_step: null,
+        answers: {},
+        lab_values: {},
+        stored_variables: {},
+        step_history: []
+    };
+
+    $('#workflowContainer').addClass('d-none').empty();
+    $('#finalResultCard').addClass('d-none');
+    $('#welcomeMessage').removeClass('d-none');
+    $('#exportResults').prop('disabled', true);
+
+    updateStepProgress(1);
+}
+
+// Reset butonu güncelleme
+$('#resetForm').off('click').on('click', function(e) {
+    e.preventDefault();
+
+    const btn = $(this);
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Sıfırlanıyor...');
+
+    setTimeout(() => {
+        $('#branchSelect, #diagnosisSelect, #moleculeSelect').val('').trigger('change');
+        $('#diagnosisSelect').html('<option value="">🔬 Önce branş seçiniz</option>').prop('disabled', true);
+        $('#moleculeSelect').html('<option value="">💊 Önce tanı seçiniz</option>').prop('disabled', true);
+
+        resetWorkflow();
+
+        btn.prop('disabled', false).html('<i class="fas fa-redo me-2"></i>Sıfırla');
+        showToast('success', 'Sıfırlandı', 'Form başarıyla sıfırlandı');
+    }, 1000);
+});
+
+function renderComplexCriteria(step) {
+    let html = `
+        <div class="result-card mb-4 slide-up">
+            <div class="card-header card-header-gradient">
+                <h5 class="mb-0 text-white d-flex align-items-center">
+                    <i class="fas fa-clipboard-check me-3"></i>
+                    ${step.title}
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-info alert-modern mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>${step.description}</strong>
+                    <br><small>Sistem ${step.criteria.length} kriteri değerlendirecektir (${step.logic === 'OR' ? 'En az biri' : 'Tümü'} gerekli)</small>
+                </div>
+
+                <!-- Kriterleri listele -->
+                <div class="criteria-preview mb-4">
+                    <h6 class="fw-bold mb-3">Değerlendirilecek Kriterler:</h6>
+    `;
+
+    step.criteria.forEach((c, i) => {
+        html += `
+            <div class="alert alert-secondary py-2 mb-2">
+                <strong>${i + 1}.</strong> ${c.name}
+            </div>
+        `;
+    });
+
+    html += `
+                </div>
+
+                <div class="text-center">
+                    <button type="button" class="btn btn-primary btn-lg" onclick="evaluateCriteria('${step.id}')">
+                        <i class="fas fa-calculator me-2"></i>Kriterleri Değerlendir
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+    function evaluateCriteria(stepId) {
+        console.log('🔍 EVALUATE CRITERIA CALLED');
+        console.log('Step ID:', stepId);
+        console.log('Molecule ID:', workflowState.molecule_id);
+        console.log('Answers:', workflowState.answers);
+        console.log('Lab Values:', workflowState.lab_values);
+        console.log('Stored Variables:', workflowState.stored_variables);
+
+        $.ajax({
+            url: `/ajax/prescription/process-step/${workflowState.molecule_id}`,
+            method: 'POST',
+            data: {
+                _token: csrfToken,
+                step_id: stepId,
+                answers: workflowState.answers,
+                lab_values: workflowState.lab_values,
+                stored_variables: workflowState.stored_variables
+            },
+            success: function(response) {
+                console.log('✅ Criteria evaluation response:', response);
+
+                if (response.success) {
+                    showCriteriaResults(response);
+                } else {
+                    showToast('error', 'Hata', response.message || 'Değerlendirme başarısız');
+                }
+            },
+            error: function(xhr) {
+                console.error('❌ Criteria evaluation error:', xhr);
+                console.error('Response text:', xhr.responseText);
+                showToast('error', 'Hata', 'Kriterler değerlendirilemedi');
+            }
+        });
+    }
+
+    function showCriteriaResults(response) {
+        console.log('📊 SHOWING CRITERIA RESULTS');
+        console.log('Eligible:', response.eligible);
+        console.log('Criteria results:', response.criteria_results);
+
+        let html = `
+            <div class="result-card mb-4 slide-up">
+                <div class="card-header ${response.eligible ? 'bg-success' : 'bg-danger'}">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas ${response.eligible ? 'fa-check-circle' : 'fa-times-circle'} me-2"></i>
+                        Kriter Değerlendirme Sonucu
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-${response.eligible ? 'success' : 'danger'} alert-modern">
+                        ${response.message.replace(/\n/g, '<br>')}
+                    </div>
+
+                    <h6 class="fw-bold mt-4 mb-3">Detaylı Kriter Sonuçları:</h6>
+                    <div class="row g-2">
+        `;
+
+        if (response.criteria_results) {
+            response.criteria_results.forEach((result, i) => {
+                html += `
+                    <div class="col-12">
+                        <div class="alert alert-${result.met ? 'success' : 'secondary'} mb-2 py-2">
+                            <i class="fas fa-${result.met ? 'check' : 'times'}-circle me-2"></i>
+                            <strong>Kriter ${i + 1}:</strong> ${result.name}
+                            <br><small class="text-muted">${result.message}</small>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+                    </div>
+
+                    <div class="mt-4">
+                        ${response.eligible ? `
+                            <button type="button" class="btn btn-success btn-lg" onclick="proceedToStep(${response.next_step})">
+                                <i class="fas fa-arrow-right me-2"></i>Devam Et
+                            </button>
+                        ` : `
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetWorkflow()">
+                                <i class="fas fa-redo me-2"></i>Baştan Başla
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        $('#workflowContainer').html(html);
+
+        console.log('✅ Criteria results rendered');
+    }
+
+function proceedToNextStep(nextStepNumber) {
+    if (nextStepNumber === 'end' || !nextStepNumber) {
+        showFinalResult(true, 'Tedaviye başlama kriterleri karşılandı. SEVELAMER reçete edilebilir.');
+        return;
+    }
+
+    const nextStep = getStepByNumber(nextStepNumber);
+    if (nextStep) {
+        renderStep(nextStep);
+    }
+}
+</script>
 
 <!-- Modern Toast Notification System -->
 <script>
@@ -1259,98 +2689,99 @@ $(function() {
                 showToast('error', 'Hata', 'Moleküller yüklenirken hata oluştu');
             },
             complete: function() {
-                hideModernLoading('moleculeLoading');
+                // hideModernLoading('moleculeLoading');
+                $('#moleculeLoading').addClass('d-none');
             }
         });
     }
 
-    function loadLabRules(moleculeId) {
-        console.log('Lab kuralları yükleniyor:', moleculeId);
+    // function loadLabRules(moleculeId) {
+    //     console.log('Lab kuralları yükleniyor:', moleculeId);
 
-        $.ajax({
-            url: `{{ url('ajax/prescription/labrules') }}/${moleculeId}`,
-            method: 'GET',
-            dataType: 'json',
-            timeout: 15000,
-            success: function(rules) {
-                console.log('Lab kuralları yüklendi:', rules);
+    //     $.ajax({
+    //         url: `{{ url('ajax/prescription/labrules') }}/${moleculeId}`,
+    //         method: 'GET',
+    //         dataType: 'json',
+    //         timeout: 15000,
+    //         success: function(rules) {
+    //             console.log('Lab kuralları yüklendi:', rules);
 
-                $('#welcomeMessage').addClass('d-none');
-                $('#moleculeInfoCard, #labRulesCard').removeClass('d-none').addClass('slide-up');
+    //             $('#welcomeMessage').addClass('d-none');
+    //             $('#moleculeInfoCard, #labRulesCard').removeClass('d-none').addClass('slide-up');
 
-                const selectedMolecule = $('#moleculeSelect option:selected').text();
-                $('#moleculeName').text(selectedMolecule);
-                $('#moleculeDescription').text('Seçilen molekül için aşağıdaki laboratuvar değerlerini kontrol edin ve gerekli değerleri girin.');
+    //             const selectedMolecule = $('#moleculeSelect option:selected').text();
+    //             $('#moleculeName').text(selectedMolecule);
+    //             $('#moleculeDescription').text('Seçilen molekül için aşağıdaki laboratuvar değerlerini kontrol edin ve gerekli değerleri girin.');
 
-                if (rules && rules.length > 0) {
-                    let rulesHtml = '<div class="row g-3">';
-                    let inputsHtml = '<div class="row g-3">';
+    //             if (rules && rules.length > 0) {
+    //                 let rulesHtml = '<div class="row g-3">';
+    //                 let inputsHtml = '<div class="row g-3">';
 
-                    rules.forEach((rule, index) => {
-                        const ruleId = `rule-${index}`;
+    //                 rules.forEach((rule, index) => {
+    //                     const ruleId = `rule-${index}`;
 
-                        rulesHtml += `
-                            <div class="col-12">
-                                <div class="alert alert-modern alert-warning-modern">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-exclamation-triangle text-warning me-3"></i>
-                                        <div>
-                                            <strong>${rule.parameter.name}</strong>
-                                            <span class="badge bg-warning text-dark ms-2">${rule.operator} ${rule.value}</span>
-                                            <small class="d-block text-muted mt-1">Birim: ${rule.parameter.unit}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+    //                     rulesHtml += `
+    //                         <div class="col-12">
+    //                             <div class="alert alert-modern alert-warning-modern">
+    //                                 <div class="d-flex align-items-center">
+    //                                     <i class="fas fa-exclamation-triangle text-warning me-3"></i>
+    //                                     <div>
+    //                                         <strong>${rule.parameter.name}</strong>
+    //                                         <span class="badge bg-warning text-dark ms-2">${rule.operator} ${rule.value}</span>
+    //                                         <small class="d-block text-muted mt-1">Birim: ${rule.parameter.unit}</small>
+    //                                     </div>
+    //                                 </div>
+    //                             </div>
+    //                         </div>
+    //                     `;
 
-                        inputsHtml += `
-                            <div class="col-md-6">
-                                <div class="lab-input-modern">
-                                    <label class="form-label fw-bold d-flex align-items-center">
-                                        <i class="fas fa-vial text-primary me-2"></i>
-                                        ${rule.parameter.name}
-                                        <span class="badge bg-primary ms-2">Gerekli</span>
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="number"
-                                               class="form-control labValue"
-                                               data-param="${rule.laboratory_parameter_id}"
-                                               data-rule-id="${ruleId}"
-                                               placeholder="Değer girin"
-                                               step="0.01"
-                                               required>
-                                        <span class="input-group-text bg-light fw-bold">${rule.parameter.unit}</span>
-                                    </div>
-                                    <small class="text-muted mt-1">Beklenen: ${rule.operator} ${rule.value} ${rule.parameter.unit}</small>
-                                </div>
-                            </div>
-                        `;
-                    });
+    //                     inputsHtml += `
+    //                         <div class="col-md-6">
+    //                             <div class="lab-input-modern">
+    //                                 <label class="form-label fw-bold d-flex align-items-center">
+    //                                     <i class="fas fa-vial text-primary me-2"></i>
+    //                                     ${rule.parameter.name}
+    //                                     <span class="badge bg-primary ms-2">Gerekli</span>
+    //                                 </label>
+    //                                 <div class="input-group">
+    //                                     <input type="number"
+    //                                            class="form-control labValue"
+    //                                            data-param="${rule.laboratory_parameter_id}"
+    //                                            data-rule-id="${ruleId}"
+    //                                            placeholder="Değer girin"
+    //                                            step="0.01"
+    //                                            required>
+    //                                     <span class="input-group-text bg-light fw-bold">${rule.parameter.unit}</span>
+    //                                 </div>
+    //                                 <small class="text-muted mt-1">Beklenen: ${rule.operator} ${rule.value} ${rule.parameter.unit}</small>
+    //                             </div>
+    //                         </div>
+    //                     `;
+    //                 });
 
-                    rulesHtml += '</div>';
-                    inputsHtml += '</div>';
+    //                 rulesHtml += '</div>';
+    //                 inputsHtml += '</div>';
 
-                    $('#labRules').html(rulesHtml);
-                    $('#labInputs').html(inputsHtml);
+    //                 $('#labRules').html(rulesHtml);
+    //                 $('#labInputs').html(inputsHtml);
 
-                    updateStepProgress(4);
-                    showToast('info', 'Lab Kuralları', `${rules.length} laboratuvar kuralı yüklendi`);
-                } else {
-                    $('#labRules').html('<div class="alert alert-info alert-modern">Bu molekül için lab kuralı tanımlanmamış.</div>');
-                    $('#labInputs').html('');
-                }
+    //                 updateStepProgress(4);
+    //                 showToast('info', 'Lab Kuralları', `${rules.length} laboratuvar kuralı yüklendi`);
+    //             } else {
+    //                 $('#labRules').html('<div class="alert alert-info alert-modern">Bu molekül için lab kuralı tanımlanmamış.</div>');
+    //                 $('#labInputs').html('');
+    //             }
 
-                $('#prescriptionResult').html('');
-                $('#resultCard').addClass('d-none');
-                $('#exportResults').prop('disabled', true);
-            },
-            error: function(xhr, status, error) {
-                console.error('Lab kuralları yüklenirken hata:', error);
-                showToast('error', 'Hata', 'Lab kuralları yüklenirken hata oluştu');
-            }
-        });
-    }
+    //             $('#prescriptionResult').html('');
+    //             $('#resultCard').addClass('d-none');
+    //             $('#exportResults').prop('disabled', true);
+    //         },
+    //         error: function(xhr, status, error) {
+    //             console.error('Lab kuralları yüklenirken hata:', error);
+    //             showToast('error', 'Hata', 'Lab kuralları yüklenirken hata oluştu');
+    //         }
+    //     });
+    // }
 
     function checkEligibility(moleculeId) {
         const labValues = {};
@@ -1499,7 +2930,9 @@ $(function() {
             setTimeout(() => $(this).removeClass('loading'), 1000);
 
             const selectedText = $(this).find('option:selected').text();
-            loadLabRules(molId);
+            // loadLabRules(molId);
+                // Workflow'u yükle (YENİ SİSTEM) ✅
+    loadMoleculeWorkflow(molId);
             showToast('info', 'Molekül Seçildi', `${selectedText} için lab kuralları yükleniyor...`);
         } else {
             $('#welcomeMessage').removeClass('d-none');
@@ -1631,7 +3064,9 @@ $(document).ready(function() {
                                 loadMolecules(data.diagnosis);
                                 setTimeout(() => {
                                     $('#moleculeSelect').val(data.molecule);
-                                    loadLabRules(data.molecule);
+                                    // loadLabRules(data.molecule);
+                                        // Workflow'u yükle (YENİ SİSTEM) ✅
+                                        loadMoleculeWorkflow(data.molecule);
 
                                     // Restore lab values
                                     setTimeout(() => {
