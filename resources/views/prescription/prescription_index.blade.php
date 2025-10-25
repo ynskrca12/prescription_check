@@ -958,17 +958,6 @@
         }, duration);
     }
 
-    // Global workflow state
-    // let workflowState = {
-    //     molecule_id: null,
-    //     workflow: [],
-    //     current_step: null,
-    //     answers: {},
-    //     lab_values: {},
-    //     stored_variables: {},
-    //     step_history: []
-    // };
-
     console.log('Global functions loaded');
 </script>
 
@@ -1021,9 +1010,6 @@
         });
     }
 
-    // function getStepByNumber(stepNumber) {
-    //     return workflowState.workflow.find(s => s.step === stepNumber);
-    // }
     function getStepByNumber(stepNumber) {
     console.log('Looking for step:', stepNumber, 'in workflow:', workflowState.workflow); // ✅ LOG EKLE
 
@@ -1196,7 +1182,12 @@
         }
 
         html += `
-                    <div class="mt-4 text-center">
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        ${workflowState.step_history.length > 1 ? `
+                            <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                                <i class="fas fa-arrow-left me-2"></i>Geri
+                            </button>
+                        ` : '<div></div>'}
                         <button type="button" class="btn btn-primary btn-lg" onclick="proceedToStep(${step.next_step})">
                             <i class="fas fa-arrow-right me-2"></i>Devam Et
                         </button>
@@ -1255,7 +1246,12 @@
 
         html += `
                     </div>
-                    <div class="mt-4 d-flex justify-content-end">
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        ${workflowState.step_history.length > 1 ? `
+                            <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                                <i class="fas fa-arrow-left me-2"></i>Geri
+                            </button>
+                        ` : '<div></div>'}
                         <button type="button" class="btn btn-success btn-lg" onclick="submitLabParameters('${step.id}')">
                             <i class="fas fa-check-circle me-2"></i>Devam Et
                         </button>
@@ -1281,7 +1277,12 @@
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>${step.description}</strong>
                     </div>
-                    <div class="text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        ${workflowState.step_history.length > 1 ? `
+                            <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                                <i class="fas fa-arrow-left me-2"></i>Geri
+                            </button>
+                        ` : '<div></div>'}
                         <button type="button" class="btn btn-primary btn-lg" onclick="evaluateCriteria('${step.id}')">
                             <i class="fas fa-calculator me-2"></i>Kriterleri Değerlendir
                         </button>
@@ -1305,7 +1306,12 @@
                     <div class="alert alert-warning alert-modern">
                         ${step.message}
                     </div>
-                    <div class="mt-4 text-center">
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        ${workflowState.step_history.length > 1 ? `
+                            <button type="button" class="btn btn-outline-secondary" onclick="goBackStep()">
+                                <i class="fas fa-arrow-left me-2"></i>Geri
+                            </button>
+                        ` : '<div></div>'}
                         <button type="button" class="btn btn-success btn-lg" onclick="showFinalResult(true, 'Bilgilendirme tamamlandı')">
                             <i class="fas fa-check-circle me-2"></i>Tamamla
                         </button>
@@ -1480,7 +1486,6 @@ $('#moleculeSelect').on('change', function() {
 });
 
 function loadMoleculeWorkflow(moleculeId) {
-    // showModernLoading('moleculeLoading');
     $('#moleculeLoading').removeClass('d-none');
 
     $.ajax({
@@ -1517,15 +1522,11 @@ function loadMoleculeWorkflow(moleculeId) {
             showToast('error', 'Hata', 'Workflow yüklenemedi');
         },
         complete: function() {
-            // hideModernLoading('moleculeLoading');
             $('#moleculeLoading').addClass('d-none');
         }
     });
 }
 
-// function getStepByNumber(stepNumber) {
-//     return workflowState.workflow.find(s => s.step === stepNumber);
-// }
 
 function getStepById(stepId) {
     if (stepId === 'end') return null;
@@ -1533,43 +1534,6 @@ function getStepById(stepId) {
     return workflowState.workflow.find(s => s.id === stepId);
 }
 
-// function renderStep(step) {
-//     if (!step) {
-//         console.error('Step not found');
-//         return;
-//     }
-
-//     workflowState.current_step = step.step;
-//     workflowState.step_history.push(step.step);
-
-//     const container = $('#workflowContainer');
-//     container.empty();
-
-//     let stepHtml = '';
-
-//     switch (step.type) {
-//         case 'prerequisite_question':
-//             stepHtml = renderPrerequisiteQuestion(step);
-//             break;
-//         case 'lab_parameters':
-//             stepHtml = renderLabParameters(step);
-//             break;
-//         case 'conditional_lab_check':
-//             stepHtml = renderConditionalLabCheck(step);
-//             break;
-//         case 'blocking_message':
-//             showFinalResult(false, step.message);
-//             return;
-//     }
-
-//     container.html(stepHtml);
-//     container.addClass('slide-up');
-
-//     // Progress güncellemesi
-//     const progressPercent = ((step.step / workflowState.workflow.length) * 80) + 20;
-//     $('#overallProgress').css('width', progressPercent + '%');
-//     $('#progressText').text(`Adım ${step.step}/${workflowState.workflow.length}`);
-// }
 
 function renderPrerequisiteQuestion(step) {
     let html = `
@@ -1916,34 +1880,6 @@ function submitConditionalLab(stepId) {
     processStep(stepId);
 }
 
-// function processStep(stepId) {
-//     showModernLoading('workflowContainer');
-
-//     $.ajax({
-//         url: `/ajax/prescription/process-step/${workflowState.molecule_id}`,
-//         method: 'POST',
-//         data: {
-//             _token: csrfToken,
-//             step_id: stepId,
-//             answers: workflowState.answers,
-//             lab_values: workflowState.lab_values,
-//             stored_variables: workflowState.stored_variables
-//         },
-//         success: function(response) {
-//             hideModernLoading('workflowContainer');
-
-//             if (response.success) {
-//                 handleStepResponse(response);
-//             } else {
-//                 showToast('error', 'Hata', response.message);
-//             }
-//         },
-//         error: function(xhr) {
-//             hideModernLoading('workflowContainer');
-//             showToast('error', 'Hata', 'İşlem sırasında bir hata oluştu');
-//         }
-//     });
-// }
 
 function handleStepResponse(response) {
     // Store variable varsa kaydet
@@ -2577,94 +2513,6 @@ $(function() {
         });
     }
 
-    // function loadLabRules(moleculeId) {
-    //     console.log('Lab kuralları yükleniyor:', moleculeId);
-
-    //     $.ajax({
-    //         url: `{{ url('ajax/prescription/labrules') }}/${moleculeId}`,
-    //         method: 'GET',
-    //         dataType: 'json',
-    //         timeout: 15000,
-    //         success: function(rules) {
-    //             console.log('Lab kuralları yüklendi:', rules);
-
-    //             $('#welcomeMessage').addClass('d-none');
-    //             $('#moleculeInfoCard, #labRulesCard').removeClass('d-none').addClass('slide-up');
-
-    //             const selectedMolecule = $('#moleculeSelect option:selected').text();
-    //             $('#moleculeName').text(selectedMolecule);
-    //             $('#moleculeDescription').text('Seçilen molekül için aşağıdaki laboratuvar değerlerini kontrol edin ve gerekli değerleri girin.');
-
-    //             if (rules && rules.length > 0) {
-    //                 let rulesHtml = '<div class="row g-3">';
-    //                 let inputsHtml = '<div class="row g-3">';
-
-    //                 rules.forEach((rule, index) => {
-    //                     const ruleId = `rule-${index}`;
-
-    //                     rulesHtml += `
-    //                         <div class="col-12">
-    //                             <div class="alert alert-modern alert-warning-modern">
-    //                                 <div class="d-flex align-items-center">
-    //                                     <i class="fas fa-exclamation-triangle text-warning me-3"></i>
-    //                                     <div>
-    //                                         <strong>${rule.parameter.name}</strong>
-    //                                         <span class="badge bg-warning text-dark ms-2">${rule.operator} ${rule.value}</span>
-    //                                         <small class="d-block text-muted mt-1">Birim: ${rule.parameter.unit}</small>
-    //                                     </div>
-    //                                 </div>
-    //                             </div>
-    //                         </div>
-    //                     `;
-
-    //                     inputsHtml += `
-    //                         <div class="col-md-6">
-    //                             <div class="lab-input-modern">
-    //                                 <label class="form-label fw-bold d-flex align-items-center">
-    //                                     <i class="fas fa-vial text-primary me-2"></i>
-    //                                     ${rule.parameter.name}
-    //                                     <span class="badge bg-primary ms-2">Gerekli</span>
-    //                                 </label>
-    //                                 <div class="input-group">
-    //                                     <input type="number"
-    //                                            class="form-control labValue"
-    //                                            data-param="${rule.laboratory_parameter_id}"
-    //                                            data-rule-id="${ruleId}"
-    //                                            placeholder="Değer girin"
-    //                                            step="0.01"
-    //                                            required>
-    //                                     <span class="input-group-text bg-light fw-bold">${rule.parameter.unit}</span>
-    //                                 </div>
-    //                                 <small class="text-muted mt-1">Beklenen: ${rule.operator} ${rule.value} ${rule.parameter.unit}</small>
-    //                             </div>
-    //                         </div>
-    //                     `;
-    //                 });
-
-    //                 rulesHtml += '</div>';
-    //                 inputsHtml += '</div>';
-
-    //                 $('#labRules').html(rulesHtml);
-    //                 $('#labInputs').html(inputsHtml);
-
-    //                 updateStepProgress(4);
-    //                 showToast('info', 'Lab Kuralları', `${rules.length} laboratuvar kuralı yüklendi`);
-    //             } else {
-    //                 $('#labRules').html('<div class="alert alert-info alert-modern">Bu molekül için lab kuralı tanımlanmamış.</div>');
-    //                 $('#labInputs').html('');
-    //             }
-
-    //             $('#prescriptionResult').html('');
-    //             $('#resultCard').addClass('d-none');
-    //             $('#exportResults').prop('disabled', true);
-    //         },
-    //         error: function(xhr, status, error) {
-    //             console.error('Lab kuralları yüklenirken hata:', error);
-    //             showToast('error', 'Hata', 'Lab kuralları yüklenirken hata oluştu');
-    //         }
-    //     });
-    // }
-
     function checkEligibility(moleculeId) {
         const labValues = {};
         let hasValues = false;
@@ -2812,9 +2660,8 @@ $(function() {
             setTimeout(() => $(this).removeClass('loading'), 1000);
 
             const selectedText = $(this).find('option:selected').text();
-            // loadLabRules(molId);
                 // Workflow'u yükle (YENİ SİSTEM) ✅
-    loadMoleculeWorkflow(molId);
+            loadMoleculeWorkflow(molId);
             showToast('info', 'Molekül Seçildi', `${selectedText} için lab kuralları yükleniyor...`);
         } else {
             $('#welcomeMessage').removeClass('d-none');
