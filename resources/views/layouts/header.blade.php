@@ -25,7 +25,7 @@
                 </li>
 
                 <!-- Reçeteler -->
-                <li class="nav-item dropdown">
+                {{-- <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover {{ request()->is('receteler*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-file-prescription me-2"></i>
                         <span>Reçeteler</span>
@@ -63,7 +63,7 @@
                             </a>
                         </li>
                     </ul>
-                </li>
+                </li> --}}
 
                 <!-- Hasta Yönetimi -->
                 {{-- <li class="nav-item dropdown">
@@ -95,7 +95,7 @@
                 </li> --}}
 
                 <!-- İlaçlar -->
-                <li class="nav-item dropdown">
+                {{-- <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover {{ request()->is('ilaclar*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-pills me-2"></i>
                         <span>İlaçlar</span>
@@ -127,39 +127,10 @@
                             </a>
                         </li>
                     </ul>
-                </li>
-
-                <!-- Doktorlar -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover {{ request()->is('doktorlar*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-user-md me-2"></i>
-                        <span>Doktorlar</span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-dark shadow border-0">
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center py-2" href="{{ url('/doktorlar') }}">
-                                <i class="fas fa-stethoscope me-2 text-primary"></i>
-                                Doktor Listesi
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center py-2" href="{{ url('/doktorlar/yeni') }}">
-                                <i class="fas fa-user-plus me-2 text-success"></i>
-                                Yeni Doktor Kaydı
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center py-2" href="{{ url('/doktorlar/uzmanlik') }}">
-                                <i class="fas fa-graduation-cap me-2 text-info"></i>
-                                Uzmanlık Alanları
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                </li> --}}
 
                 <!-- Raporlar -->
-                <li class="nav-item dropdown">
+                {{-- <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover {{ request()->is('raporlar*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-chart-line me-2"></i>
                         <span>Raporlar</span>
@@ -197,10 +168,10 @@
                             </a>
                         </li>
                     </ul>
-                </li>
+                </li> --}}
 
                 <!-- Ayarlar -->
-                <li class="nav-item dropdown">
+                {{-- <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover {{ request()->is('ayarlar*') ? 'active' : '' }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-cog me-2"></i>
                         <span>Ayarlar</span>
@@ -232,7 +203,7 @@
                             </a>
                         </li>
                     </ul>
-                </li>
+                </li> --}}
 
                 <!-- Divider -->
                 <li class="nav-item">
@@ -240,13 +211,9 @@
                 </li>
 
                 <!-- Bildirimler -->
-                <li class="nav-item dropdown">
+                {{-- <li class="nav-item dropdown">
                     <a class="nav-link d-flex align-items-center px-3 py-2 rounded-3 mx-1 nav-link-hover position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-bell fs-5"></i>
-                        {{-- <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
-                            3
-                            <span class="visually-hidden">okunmamış bildirim</span>
-                        </span> --}}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow border-0" style="width: 300px;">
                         <li class="dropdown-header d-flex justify-content-between align-items-center">
@@ -294,7 +261,7 @@
                             </a>
                         </li>
                     </ul>
-                </li>
+                </li> --}}
 
                 <!-- Kullanıcı Profil Menüsü -->
                 <li class="nav-item dropdown">
@@ -302,10 +269,21 @@
                         <div class="user-avatar me-2">
                             <i class="fas fa-user-circle fs-4"></i>
                         </div>
-                        <div class="d-flex flex-column align-items-start">
-                            <small class="mb-0 fw-semibold">{{ Auth::user()->name ?? 'Kullanıcı' }}</small>
-                            <small class="text-white" style="font-size: 0.7rem;">{{ Auth::user()->role ?? 'Admin' }}</small>
-                        </div>
+                   <div class="d-flex flex-column align-items-start">
+                        <small class="mb-0 fw-semibold">
+                            {{
+                                trim(
+                                    (Auth::guard('physician')->user()->name ?? '') . ' ' .
+                                    (Auth::guard('physician')->user()->surname ?? '')
+                                )
+                                ?: 'Hekim'
+                            }}
+                        </small>
+                        <small class="text-white" style="font-size: 0.7rem;">
+                            {{ Auth::guard('physician')->user()->physician_code  ?? 'Kod' }}
+                        </small>
+                    </div>
+
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow border-0">
                         <li>
@@ -314,28 +292,22 @@
                                 Profilim
                             </a>
                         </li>
-                        <li>
+                        {{-- <li>
                             <a class="dropdown-item d-flex align-items-center py-2" href="{{ url('/ayarlar/hesap') }}">
                                 <i class="fas fa-cog me-2 text-secondary"></i>
                                 Hesap Ayarları
                             </a>
-                        </li>
-                        <li>
+                        </li> --}}
+                        {{-- <li>
                             <a class="dropdown-item d-flex align-items-center py-2" href="{{ url('/bildirimler') }}">
                                 <i class="fas fa-bell me-2 text-warning"></i>
                                 Bildirimler
                                 <span class="badge bg-danger ms-auto">3</span>
                             </a>
-                        </li>
+                        </li> --}}
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <a class="dropdown-item d-flex align-items-center py-2" href="{{ url('/yardim') }}">
-                                <i class="fas fa-question-circle me-2 text-primary"></i>
-                                Yardım
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center py-2 text-danger" href="{{ url('/cikis') }}" onclick="event.preventDefault(); confirmLogout();">
+                            <a class="dropdown-item d-flex align-items-center py-2 text-danger" href="#" onclick="event.preventDefault(); confirmLogout();">
                                 <i class="fas fa-sign-out-alt me-2"></i>
                                 Çıkış Yap
                             </a>
@@ -347,7 +319,7 @@
     </div>
 
     <!-- Hidden Logout Form -->
-    <form id="logout-form" action="#" method="POST" class="d-none">
+    <form id="logout-form" action="{{ route('physician.logout') }}" method="POST" class="d-none">
         @csrf
     </form>
 </header>

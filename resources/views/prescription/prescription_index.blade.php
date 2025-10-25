@@ -5,12 +5,12 @@
 @section('page-title', 'Reçete Uygunluk Kontrolü')
 @section('page-description', 'Branş, tanı ve molekül seçerek reçete uygunluğunu kontrol edin')
 
-@section('breadcrumb')
+{{-- @section('breadcrumb')
     <li class="breadcrumb-item active" aria-current="page">
         <i class="fas fa-prescription-bottle-alt me-1"></i>
         Reçete Uygunluk
     </li>
-@endsection
+@endsection --}}
 
 @section('page-actions')
     <div class="d-flex gap-2">
@@ -22,10 +22,10 @@
             <i class="fas fa-question-circle me-2"></i>
             Yardım
         </button>
-        <button type="button" class="btn btn-primary btn-lg" id="exportResults" disabled>
+        {{-- <button type="button" class="btn btn-primary btn-lg" id="exportResults" disabled>
             <i class="fas fa-download me-2"></i>
             Rapor Al
-        </button>
+        </button> --}}
     </div>
 @endsection
 
@@ -142,7 +142,6 @@
 
         /* Modern Form Elements */
         .modern-select {
-            background: rgba(255, 255, 255, 0.9);
             border: 1px solid #dcdcdc;
             border-radius: 16px;
             padding: 14px;
@@ -598,122 +597,6 @@
             </div>
         </div>
 
-        <!-- Sağ Panel - Bilgi ve Sonuçlar -->
-        {{-- <div class="col-lg-8">
-            <!-- Başlangıç Mesajı -->
-            <div class="welcome-container fade-in" id="welcomeMessage">
-                <i class="fas fa-prescription-bottle-alt fa-5x pulse-icon mb-4" style="color: var(--primary-gradient);"></i>
-                <h3 class=" mb-3 fw-bold">Reçete Uygunluk Sistemi</h3>
-                <p class="lead mb-4">
-                    Modern ve güvenli reçete kontrol sistemi. Sol panelden branş seçerek başlayın.
-                </p>
-
-                <div class="row g-4 mt-4">
-                    <div class="col-md-4">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <h6 class="feature-title">Güvenli Sistem</h6>
-                            <p class="feature-description">Veri koruma ve şifrelemeli güvenlik</p>
-                            <div class="feature-stats mt-3">
-                                <span class="badge bg-success px-3 py-2">SSL Korumalı</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-bolt"></i>
-                            </div>
-                            <h6 class="feature-title">Yüksek Performans</h6>
-                            <p class="feature-description">Milisaniyeler içinde sonuç alma garantisi</p>
-                            <div class="feature-stats mt-3">
-                                <span class="badge bg-warning px-3 py-2">< 500ms</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="fas fa-check-double"></i>
-                            </div>
-                            <h6 class="feature-title">Yüksek Doğruluk</h6>
-                            <p class="feature-description">Hassas kontrol sistemi</p>
-                            <div class="feature-stats mt-3">
-                                <span class="badge bg-info px-3 py-2">%99.9 Doğru</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Molekül Bilgisi -->
-            <div class="result-card mb-4 d-none slide-up" id="moleculeInfoCard">
-                <div class="card-header card-header-gradient">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <i class="fas fa-info-circle me-3"></i>
-                        Molekül Bilgileri
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <div id="moleculeInfo">
-                        <h5 id="moleculeName" class="text-primary mb-3 fw-bold"></h5>
-                        <p id="moleculeDescription" class="text-muted lead fs-6"></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Lab Kuralları -->
-            <div class="result-card mb-4 d-none slide-up" id="labRulesCard">
-                <div class="card-header card-header-info">
-                    <h5 class="mb-0 text-white d-flex align-items-center">
-                        <i class="fas fa-vial me-3"></i>
-                        Laboratuvar Kuralları ve Değer Girişi
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <h6 class="mb-3">
-                                <i class="fas fa-list-check me-2"></i>Gerekli Kurallar
-                            </h6>
-                            <div id="labRules"></div>
-                        </div>
-                        <div class="col-md-8">
-                            <h6 class="mb-3">
-                                <i class="fas fa-keyboard me-2"></i>Değer Girişi
-                            </h6>
-                            <div id="labInputs"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sonuç -->
-            <div class="result-card d-none slide-up" id="resultCard">
-                <div class="card-header card-header-gradient">
-                    <h5 class="mb-0 d-flex align-items-center">
-                        <i class="fas fa-clipboard-check me-3"></i>
-                        Uygunluk Sonucu
-                    </h5>
-                </div>
-                <div class="card-body p-4">
-                    <div id="prescriptionResult"></div>
-                    <div class="mt-4 d-flex gap-3">
-                        <button class="btn btn-primary" id="saveResult">
-                            <i class="fas fa-save me-2"></i>Sonucu Kaydet
-                        </button>
-                        <button class="btn btn-outline-primary" id="printResult">
-                            <i class="fas fa-print me-2"></i>Yazdır
-                        </button>
-                        <button class="btn btn-outline-success" id="shareResult">
-                            <i class="fas fa-share me-2"></i>Paylaş
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div> --}}
         <!-- Workflow Container - Dinamik olarak render edilecek -->
         <div class="col-lg-8">
             <!-- Welcome Message -->
@@ -728,7 +611,7 @@
 
             <!-- Final Result Card -->
             <div class="result-card d-none slide-up" id="finalResultCard">
-                <div class="card-header card-header-gradient">
+                <div class="card-header card-header-gradient p-3">
                     <h5 class="mb-0 d-flex align-items-center">
                         <i class="fas fa-clipboard-check me-3"></i>
                         Uygunluk Sonucu
@@ -737,12 +620,12 @@
                 <div class="card-body p-4">
                     <div id="finalResult"></div>
                     <div class="mt-4 d-flex gap-3">
-                        <button class="btn btn-primary" id="saveResult">
+                        {{-- <button class="btn btn-primary" id="saveResult">
                             <i class="fas fa-save me-2"></i>Sonucu Kaydet
                         </button>
                         <button class="btn btn-outline-primary" id="printResult">
                             <i class="fas fa-print me-2"></i>Yazdır
-                        </button>
+                        </button> --}}
                     </div>
                 </div>
             </div>
@@ -1237,7 +1120,7 @@
     function renderPrerequisiteQuestion(step) {
         let html = `
             <div class="result-card mb-4 slide-up">
-                <div class="card-header card-header-info">
+                <div class="card-header card-header-info p-3">
                     <h5 class="mb-0 text-white d-flex align-items-center">
                         <i class="fas fa-question-circle me-3"></i>
                         Ön Kontrol Sorusu ${step.step}
@@ -1291,7 +1174,7 @@
     function renderInfoMessage(step) {
         let html = `
             <div class="result-card mb-4 slide-up">
-                <div class="card-header card-header-info">
+                <div class="card-header card-header-info p-3">
                     <h5 class="mb-0 text-white d-flex align-items-center">
                         <i class="fas fa-info-circle me-3"></i>
                         ${step.title}
@@ -1328,7 +1211,7 @@
     function renderLabParametersInput(step) {
         let html = `
             <div class="result-card mb-4 slide-up">
-                <div class="card-header card-header-success">
+                <div class="card-header card-header-success p-3">
                     <h5 class="mb-0 text-white d-flex align-items-center">
                         <i class="fas fa-vial me-3"></i>
                         ${step.title}
@@ -1387,7 +1270,7 @@
     function renderComplexCriteria(step) {
         let html = `
             <div class="result-card mb-4 slide-up">
-                <div class="card-header card-header-gradient">
+                <div class="card-header card-header-gradient p-3">
                     <h5 class="mb-0 text-white d-flex align-items-center">
                         <i class="fas fa-clipboard-check me-3"></i>
                         ${step.title}
@@ -1412,7 +1295,7 @@
     function renderTerminationWarning(step) {
         let html = `
             <div class="result-card mb-4 slide-up">
-                <div class="card-header bg-warning">
+                <div class="card-header bg-warning p-3">
                     <h5 class="mb-0 text-white d-flex align-items-center">
                         <i class="fas fa-exclamation-triangle me-3"></i>
                         ${step.title}
@@ -1691,7 +1574,7 @@ function getStepById(stepId) {
 function renderPrerequisiteQuestion(step) {
     let html = `
         <div class="result-card mb-4 slide-up">
-            <div class="card-header card-header-info">
+            <div class="card-header card-header-info p-3">
                 <h5 class="mb-0 text-white d-flex align-items-center">
                     <i class="fas fa-question-circle me-3"></i>
                     Ön Kontrol Sorusu ${step.step}
@@ -1775,7 +1658,7 @@ function renderPrerequisiteQuestion(step) {
 function renderLabParameters(step) {
     let html = `
         <div class="result-card mb-4 slide-up">
-            <div class="card-header card-header-success">
+            <div class="card-header card-header-success p-3">
                 <h5 class="mb-0 text-white d-flex align-items-center">
                     <i class="fas fa-vial me-3"></i>
                     Laboratuvar Parametreleri
@@ -1847,7 +1730,7 @@ function renderConditionalLabCheck(step) {
 
     let html = `
         <div class="result-card mb-4 slide-up">
-            <div class="card-header card-header-warning">
+            <div class="card-header card-header-warning p-3">
                 <h5 class="mb-0 text-white d-flex align-items-center">
                     <i class="fas fa-vial me-3"></i>
                     Koşullu Laboratuvar Kontrolü
@@ -2096,7 +1979,7 @@ function showFinalResult(eligible, message, labResults = null) {
 
     const alertClass = eligible ? 'alert-success-modern' : 'alert-danger-modern';
     const icon = eligible ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
-    const title = eligible ? '✅ Reçete Yazılabilir' : '❌ Reçete Yazılamaz';
+    const title = eligible ? 'Reçete Yazılabilir' : 'Reçete Yazılamaz';
     const bgClass = eligible ? 'bg-success' : 'bg-danger';
 
     let html = `
@@ -2157,7 +2040,7 @@ function showFinalResult(eligible, message, labResults = null) {
     // Workflow bilgilerini göster
     html += `
         <div class="card mt-3">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light p-3">
                 <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Kontrol Detayları</h6>
             </div>
             <div class="card-body">
@@ -2168,7 +2051,6 @@ function showFinalResult(eligible, message, labResults = null) {
                     </div>
                     <div class="col-md-6">
                         <p class="mb-2"><strong>Molekül:</strong> ${$('#moleculeSelect option:selected').text()}</p>
-                        <p class="mb-2"><strong>Toplam Adım:</strong> ${workflowState.step_history.length}</p>
                     </div>
                 </div>
             </div>
@@ -2243,14 +2125,14 @@ $('#resetForm').off('click').on('click', function(e) {
         resetWorkflow();
 
         btn.prop('disabled', false).html('<i class="fas fa-redo me-2"></i>Sıfırla');
-        showToast('success', 'Sıfırlandı', 'Form başarıyla sıfırlandı');
+        showToast('success', 'Sıfırlandı', 'Reçete başarıyla sıfırlandı');
     }, 1000);
 });
 
 function renderComplexCriteria(step) {
     let html = `
         <div class="result-card mb-4 slide-up">
-            <div class="card-header card-header-gradient">
+            <div class="card-header card-header-gradient p-3">
                 <h5 class="mb-0 text-white d-flex align-items-center">
                     <i class="fas fa-clipboard-check me-3"></i>
                     ${step.title}
@@ -2333,7 +2215,7 @@ function renderComplexCriteria(step) {
 
         let html = `
             <div class="result-card mb-4 slide-up">
-                <div class="card-header ${response.eligible ? 'bg-success' : 'bg-danger'}">
+                <div class="card-header ${response.eligible ? 'bg-success' : 'bg-danger'} p-3">
                     <h5 class="mb-0 text-white">
                         <i class="fas ${response.eligible ? 'fa-check-circle' : 'fa-times-circle'} me-2"></i>
                         Kriter Değerlendirme Sonucu
@@ -2982,7 +2864,7 @@ $(document).ready(function() {
         // Reset button text
         btn.prop('disabled', false).html('<i class="fas fa-redo me-2"></i>Sıfırla');
 
-        showToast('success', 'Sıfırlandı', 'Form başarıyla sıfırlandı');
+        showToast('success', 'Sıfırlandı', 'Reçete başarıyla sıfırlandı');
 
         // Remove animation class
         setTimeout(() => $('#welcomeMessage').removeClass('fade-in'), 600);

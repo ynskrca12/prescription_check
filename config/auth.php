@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'physician' => [  // ← YENİ EKLE
+            'driver' => 'session',
+            'provider' => 'physicians',
+        ],
     ],
 
     /*
@@ -63,6 +68,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+
+        'physicians' => [  // ← YENİ EKLE
+            'driver' => 'eloquent',
+            'model' => App\Models\Physician::class,
         ],
 
         // 'users' => [
